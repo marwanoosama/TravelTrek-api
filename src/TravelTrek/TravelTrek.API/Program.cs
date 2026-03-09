@@ -1,3 +1,4 @@
+using TravelTrek.API.Middleware;
 using TravelTrek.Infrastructure;
 using TravelTrek.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -27,7 +28,8 @@ namespace TravelTrek.API
                 await db.Database.MigrateAsync();
             }
 
-            // Configure the HTTP request pipeline.
+            app.UseMiddleware<ExceptionHandlingMiddleware>();
+
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();

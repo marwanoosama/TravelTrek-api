@@ -3,7 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using TravelTrek.Domain.Entities;
+using TravelTrek.Domain.Interfaces;
 using TravelTrek.Infrastructure.Data;
+using TravelTrek.Infrastructure.Repositories;
 
 namespace TravelTrek.Infrastructure
 {
@@ -31,6 +33,9 @@ namespace TravelTrek.Infrastructure
             })
             .AddEntityFrameworkStores<AppDbContext>()
             .AddDefaultTokenProviders();
+
+            services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+            services.AddScoped<IUnitOfWork, UnitOfWork>();
 
             return services;
         }
