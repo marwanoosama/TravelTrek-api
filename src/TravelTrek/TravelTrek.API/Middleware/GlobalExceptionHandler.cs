@@ -32,7 +32,8 @@ namespace TravelTrek.API.Middleware
                 ArgumentException => Error.Validation("Validation.ArgumentInvalid", exception.Message),
                 KeyNotFoundException => Error.NotFound("Resource.NotFound", exception.Message),
                 UnauthorizedAccessException => Error.Unauthorized("Auth.Unauthorized", "Not authorized"),
-                InvalidOperationException => Error.Conflict("Operation.Invalid", exception.Message),
+                // Note: InvalidOperationException is intentionally mapped to Internal (500), NOT Conflict (409).
+                // It's thrown by EF Core, Identity, Result.Value on failure, etc. — not a client conflict.
                 _ => Error.Internal("Internal.Error", _env.IsDevelopment() ? exception.Message : "An unexpected error occurred")
             };
 
