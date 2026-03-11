@@ -1,8 +1,9 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
+using TravelTrek.API.Middleware;
 using TravelTrek.Infrastructure;
 using TravelTrek.Infrastructure.Data;
-using Microsoft.EntityFrameworkCore;
-using TravelTrek.API.Middleware;
 
 namespace TravelTrek.API
 {
@@ -40,7 +41,41 @@ namespace TravelTrek.API
                 });
 
             builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen();
+
+            builder.Services.AddSwaggerGen(options =>
+            {
+                options.SwaggerDoc("v1", new OpenApiInfo
+                {
+                    Title = "TravelTrek API",
+                    Version = "v1",
+                    Description = "AI-powered travel planning API"
+                });
+
+                options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                {
+                    Name = "Authorization",
+                    Type = SecuritySchemeType.Http,
+                    Scheme = "Bearer",
+                    BearerFormat = "JWT",
+                    In = ParameterLocation.Header,
+                    Description = "Enter your JWT token below.\r\nExample: eyJhbGci..."
+                });
+
+                options.AddSecurityRequirement(new OpenApiSecurityRequirement
+                {
+                    {
+                        new OpenApiSecurityScheme
+                        {
+                            Reference = new OpenApiReference
+                            {
+                                Type = ReferenceType.SecurityScheme,
+                                Id = "Bearer"
+                            }
+                        },
+                        Array.Empty<string>()
+                    }
+                });
+            });
 
             builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
             builder.Services.AddProblemDetails();
@@ -57,10 +92,17 @@ namespace TravelTrek.API
 
             app.UseExceptionHandler();
 
+            // Enable Swagger in Development only
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
-                app.UseSwaggerUI();
+                app.UseSwaggerUI(options =>
+                {
+                    options.SwaggerEndpoint("/swagger/v1/swagger.json", "TravelTrek API v1");
+                    options.RoutePrefix = "swagger"; // ← هنا التغيير
+                    options.DisplayRequestDuration();
+                    options.EnableDeepLinking();
+                });
             }
 
             app.UseHttpsRedirection();
