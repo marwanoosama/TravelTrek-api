@@ -1,7 +1,9 @@
+using TravelTrek.Domain.Entities;
+
 namespace TravelTrek.Domain.Interfaces
 {
-    public interface IUserRepository : IGenericRepository<Entities.User>
+    public interface IUserRepository : IGenericRepository<User>
     {
-        Task<Entities.User?> GetByGoogleIdAsync(string googleId);
+        Task<User?> GetByGoogleIdAsync(string googleId);
     }
 }

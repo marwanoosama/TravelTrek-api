@@ -1,4 +1,4 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -49,7 +49,10 @@ namespace TravelTrek.API.Controllers
         [HttpPost("revoke-token")]
         public async Task<IActionResult> RevokeToken([FromBody] string refreshToken)
         {
-            var userId = Guid.Parse(User.FindFirstValue(JwtRegisteredClaimNames.Sub)!);
+            var userIdStr = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+            if (!Guid.TryParse(userIdStr, out var userId))
+                return Unauthorized();
+
             var result = await _authService.RevokeTokenAsync(refreshToken, userId);
             return ToActionResult(result);
         }
