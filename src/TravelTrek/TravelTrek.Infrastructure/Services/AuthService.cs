@@ -1,4 +1,4 @@
-using Google.Apis.Auth;
+﻿using Google.Apis.Auth;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using System.IdentityModel.Tokens.Jwt;
@@ -8,6 +8,7 @@ using TravelTrek.Domain.Common;
 using TravelTrek.Domain.Entities;
 using TravelTrek.Domain.Interfaces;
 using TravelTrek.Infrastructure.Auth;
+using TravelTrek.Infrastructure.Services;
 
 namespace TravelTrek.Infrastructure.Services
 {
@@ -18,19 +19,22 @@ namespace TravelTrek.Infrastructure.Services
         private readonly IGenericRepository<RefreshToken> _refreshTokenRepo;
         private readonly IUnitOfWork _unitOfWork;
         private readonly JwtSettings _jwtSettings;
+        private readonly IUserRepository _userRepository;
 
         public AuthService(
             UserManager<User> userManager,
             ITokenService tokenService,
             IGenericRepository<RefreshToken> refreshTokenRepo,
             IUnitOfWork unitOfWork,
-            IOptions<JwtSettings> jwtSettings)
+            IOptions<JwtSettings> jwtSettings,
+            IUserRepository userRepository)
         {
             _userManager = userManager;
             _tokenService = tokenService;
             _refreshTokenRepo = refreshTokenRepo;
             _unitOfWork = unitOfWork;
             _jwtSettings = jwtSettings.Value;
+            _userRepository = userRepository;
         }
 
         public async Task<Result<AuthResponse>> RegisterAsync(RegisterRequest request)
@@ -63,13 +67,14 @@ namespace TravelTrek.Infrastructure.Services
             {
                 var payload = await GoogleJsonWebSignature.ValidateAsync(request.IdToken);
 
-                var existingUser = await _userManager.FindByEmailAsync(payload.Email);
+                // ← استخدم الـ repository أولاً بالـ GoogleId
+                var existingUser = await _userRepository.GetByGoogleIdAsync(payload.Subject)
+                    ?? await _userManager.FindByEmailAsync(payload.Email);
+
                 if (existingUser != null)
                 {
                     if (!existingUser.IsActive)
-                    {
                         return Result.Failure<AuthResponse>(Error.Forbidden("Auth.AccountDeactivated", "This account has been deactivated."));
-                    }
 
                     if (existingUser.GoogleId == null)
                     {
