@@ -30,5 +30,21 @@ namespace TravelTrek.Domain.Entities
         public ICollection<TravelPlan> TravelPlans { get; set; } = new List<TravelPlan>();
         public ICollection<PlanRating> PlanRatings { get; set; } = new List<PlanRating>();
         public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
+
+
+        #region Methods
+        public static User FromGooglePayload(string email, string name, string googleId, string? picture)
+        {
+            return new User
+            {
+                Email = email,
+                UserName = email,
+                FullName = name,
+                EmailConfirmed = true,
+                ProfilePictureUrl = picture,
+                GoogleId = googleId
+            };
+        } 
+        #endregion
     }
 }

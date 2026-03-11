@@ -1,0 +1,14 @@
+using TravelTrek.Application.DTOs.Auth;
+using TravelTrek.Domain.Common;
+
+namespace TravelTrek.Application.Interfaces
+{
+    public interface IAuthService
+    {
+        Task<Result<AuthResponse>> RegisterAsync(RegisterRequest request);
+        Task<Result<AuthResponse>> LoginAsync(LoginRequest request);
+        Task<Result<AuthResponse>> SignupWithGoogleAsync(SignupWithGoogleRequest request);
+        Task<Result<AuthResponse>> RefreshTokenAsync(RefreshTokenRequest request);
+        Task<Result> RevokeTokenAsync(string refreshToken, Guid userId);
+    }
+}
