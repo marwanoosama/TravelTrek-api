@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using TravelTrek.Domain.Common;
+using TravelTrek.Domain.Abstractions;
 
 namespace TravelTrek.API.Controllers
 {
@@ -11,7 +12,31 @@ namespace TravelTrek.API.Controllers
             if (result.IsSuccess)
                 return Ok(result.Value);
 
-            return StatusCode(GetStatusCode(result.Error), new { error = result.Error.Description });
+            // Handle multiple validation errors
+            if (result is IValidationResult validationResult && validationResult.Errors.Length > 0)
+            {
+                return StatusCode(GetStatusCode(result.Error), new
+                {
+                    code = result.Error.Code,
+                    message = result.Error.Description,
+                    type = result.Error.Type.ToString(),
+                    timestamp = DateTime.UtcNow,
+                    errors = validationResult.Errors.Select(e => new
+                    {
+                        code = e.Code,
+                        message = e.Description
+                    })
+                });
+            }
+
+            // Single error
+            return StatusCode(GetStatusCode(result.Error), new
+            {
+                code = result.Error.Code,
+                message = result.Error.Description,
+                type = result.Error.Type.ToString(),
+                timestamp = DateTime.UtcNow
+            });
         }
 
         protected IActionResult ToActionResult(Result result)
@@ -19,17 +44,24 @@ namespace TravelTrek.API.Controllers
             if (result.IsSuccess)
                 return NoContent();
 
-            return StatusCode(GetStatusCode(result.Error), new { error = result.Error.Description });
+            return StatusCode(GetStatusCode(result.Error), new
+            {
+                code = result.Error.Code,
+                message = result.Error.Description,
+                type = result.Error.Type.ToString(),
+                timestamp = DateTime.UtcNow
+            });
         }
 
         private static int GetStatusCode(Error error) => error.Type switch
         {
-            ErrorType.Validation => 400,
-            ErrorType.NotFound => 404,
-            ErrorType.Conflict => 409,
-            ErrorType.Unauthorized => 401,
-            ErrorType.Forbidden => 403,
-            _ => 500
+            ErrorType.Validation => StatusCodes.Status400BadRequest,
+            ErrorType.NotFound => StatusCodes.Status404NotFound,
+            ErrorType.Conflict => StatusCodes.Status409Conflict,
+            ErrorType.Unauthorized => StatusCodes.Status401Unauthorized,
+            ErrorType.Forbidden => StatusCodes.Status403Forbidden,
+            ErrorType.External => StatusCodes.Status502BadGateway,
+            _ => StatusCodes.Status500InternalServerError
         };
     }
 }

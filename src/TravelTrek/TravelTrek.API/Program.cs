@@ -12,48 +12,49 @@ namespace TravelTrek.API
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
             builder.Services.AddControllers()
                 .ConfigureApiBehaviorOptions(options =>
                 {
-                    // Override default 400 response from [ApiController] to match our Result pattern
                     options.InvalidModelStateResponseFactory = context =>
                     {
                         var errors = context.ModelState
                             .Where(e => e.Value?.Errors.Count > 0)
-                            .SelectMany(e => e.Value!.Errors.Select(x =>
-                                new { field = e.Key, message = x.ErrorMessage }))
-                            .ToList();
+                            .SelectMany(e => e.Value!.Errors.Select(x => new
+                            {
+                                code = $"Validation.{e.Key}",
+                                message = x.ErrorMessage
+                            }))
+                            .ToArray();
 
-                        return new BadRequestObjectResult(new
+                        var response = new
                         {
-                            error = "One or more validation errors occurred.",
-                            details = errors
-                        });
+                            code = "Validation.Failed",
+                            message = "One or more validation errors occurred",
+                            type = "Validation",
+                            timestamp = DateTime.UtcNow,
+                            errors
+                        };
+
+                        return new BadRequestObjectResult(response);
                     };
                 });
 
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
-            // Global Exception Handler (.NET 8 IExceptionHandler)
             builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
             builder.Services.AddProblemDetails();
 
-            // Infrastructure
             builder.Services.AddInfrastructureServices(builder.Configuration);
 
             var app = builder.Build();
 
-            //pending migrations
             using (var scope = app.Services.CreateScope())
             {
                 var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                 await db.Database.MigrateAsync();
             }
 
-
-            // Must be first in the pipeline to catch all exceptions
             app.UseExceptionHandler();
 
             if (app.Environment.IsDevelopment())
@@ -63,10 +64,8 @@ namespace TravelTrek.API
             }
 
             app.UseHttpsRedirection();
-
             app.UseAuthentication();
             app.UseAuthorization();
-
             app.MapControllers();
 
             app.Run();

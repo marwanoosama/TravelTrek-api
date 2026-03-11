@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Diagnostics;
-using Microsoft.AspNetCore.Mvc;
+using TravelTrek.Domain.Common;
 
 namespace TravelTrek.API.Middleware
 {
@@ -23,33 +23,44 @@ namespace TravelTrek.API.Middleware
             Exception exception,
             CancellationToken cancellationToken)
         {
-            _logger.LogError(exception, "Unhandled exception occurred. TraceId: {TraceId}", httpContext.TraceIdentifier);
+            _logger.LogError(exception, "Unhandled exception. TraceId: {TraceId}", httpContext.TraceIdentifier);
 
-            var (statusCode, title) = exception switch
+            // Map exception to Error (Result Pattern)
+            var error = exception switch
             {
-                ArgumentNullException     => (StatusCodes.Status400BadRequest,  "Bad Request"),
-                ArgumentException         => (StatusCodes.Status400BadRequest,  "Bad Request"),
-                UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "Unauthorized"),
-                _                         => (StatusCodes.Status500InternalServerError, "Internal Server Error")
+                ArgumentNullException => Error.Validation("Validation.ArgumentNull", "Required argument was null"),
+                ArgumentException => Error.Validation("Validation.ArgumentInvalid", exception.Message),
+                KeyNotFoundException => Error.NotFound("Resource.NotFound", exception.Message),
+                UnauthorizedAccessException => Error.Unauthorized("Auth.Unauthorized", "Not authorized"),
+                InvalidOperationException => Error.Conflict("Operation.Invalid", exception.Message),
+                _ => Error.Internal("Internal.Error", _env.IsDevelopment() ? exception.Message : "An unexpected error occurred")
             };
 
-            var problemDetails = new ProblemDetails
+            var statusCode = error.Type switch
             {
-                Status = statusCode,
-                Title  = title,
-                Detail = _env.IsDevelopment()
-                    ? exception.Message          // show details in Development only
-                    : "An unexpected error occurred. Please try again later.",
-                Extensions =
-                {
-                    ["traceId"] = httpContext.TraceIdentifier
-                }
+                ErrorType.Validation => StatusCodes.Status400BadRequest,
+                ErrorType.NotFound => StatusCodes.Status404NotFound,
+                ErrorType.Conflict => StatusCodes.Status409Conflict,
+                ErrorType.Unauthorized => StatusCodes.Status401Unauthorized,
+                ErrorType.Forbidden => StatusCodes.Status403Forbidden,
+                ErrorType.External => StatusCodes.Status502BadGateway,
+                _ => StatusCodes.Status500InternalServerError
             };
 
-            httpContext.Response.StatusCode  = statusCode;
-            httpContext.Response.ContentType = "application/problem+json";
+            var response = new
+            {
+                code = error.Code,
+                message = error.Description,
+                type = error.Type.ToString(),
+                timestamp = DateTime.UtcNow,
+                traceId = httpContext.TraceIdentifier,
+                details = _env.IsDevelopment() ? exception.StackTrace : null
+            };
 
-            await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
+            httpContext.Response.StatusCode = statusCode;
+            httpContext.Response.ContentType = "application/json";
+
+            await httpContext.Response.WriteAsJsonAsync(response, cancellationToken);
 
             return true; // true = exception was handled, don't rethrow
         }
