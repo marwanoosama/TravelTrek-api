@@ -21,9 +21,11 @@ namespace TravelTrek.Infrastructure
             this IServiceCollection services,
             IConfiguration configuration)
         {
+            var connectionString = configuration.GetConnectionString("DefaultConnection")
+                ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+
             services.AddDbContext<AppDbContext>(options =>
-                options.UseSqlServer(
-                    configuration.GetConnectionString("DefaultConnection")));
+                options.UseSqlServer(connectionString));
 
             services.AddIdentity<User, IdentityRole<Guid>>(options =>
             {
