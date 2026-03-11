@@ -17,6 +17,9 @@ namespace TravelTrek.Infrastructure.Data.Configurations
             builder.Property(r => r.Stars)
                 .IsRequired();
 
+            builder.ToTable(t =>
+                t.HasCheckConstraint("CK_PlanRating_Stars", "[Stars] BETWEEN 1 AND 5"));
+
             builder.Property(r => r.Comment)
                 .HasMaxLength(500);
 

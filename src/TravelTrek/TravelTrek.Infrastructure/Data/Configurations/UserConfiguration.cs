@@ -18,7 +18,7 @@ namespace TravelTrek.Infrastructure.Data.Configurations
                 .HasDefaultValue("en");
 
             builder.Property(u => u.Country)
-                .HasMaxLength(5);
+                .HasMaxLength(100);
 
             builder.Property(u => u.ProfilePictureUrl)
                 .HasMaxLength(500);

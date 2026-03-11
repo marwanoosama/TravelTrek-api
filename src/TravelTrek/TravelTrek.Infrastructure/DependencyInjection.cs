@@ -11,6 +11,7 @@ using TravelTrek.Domain.Interfaces;
 using TravelTrek.Infrastructure.Auth;
 using TravelTrek.Infrastructure.Data;
 using TravelTrek.Infrastructure.Repositories;
+using TravelTrek.Infrastructure.Repositories.User;
 using TravelTrek.Infrastructure.Services;
 
 namespace TravelTrek.Infrastructure
@@ -64,6 +65,7 @@ namespace TravelTrek.Infrastructure
             });
 
             services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
+            services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
 
             services.Configure<JwtSettings>(configuration.GetSection("JwtSettings"));
