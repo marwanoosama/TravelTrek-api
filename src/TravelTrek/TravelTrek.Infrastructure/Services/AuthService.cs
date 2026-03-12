@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using TravelTrek.Application.DTOs.Auth;
 using TravelTrek.Application.Interfaces;
 using TravelTrek.Domain.Common;
@@ -54,8 +55,11 @@ namespace TravelTrek.Infrastructure.Services
             var identityResult = await _userManager.CreateAsync(user, request.Password);
             if (!identityResult.Succeeded)
             {
-                var errors = string.Join(", ", identityResult.Errors.Select(e => e.Description));
-                return Result.Failure<AuthResponse>(Error.Validation("Auth.WeakPassword", errors));
+                var errors = identityResult.Errors
+                    .Select(e => Error.Validation(e.Code, e.Description))
+                    .ToArray();
+                
+                return ValidationResult<AuthResponse>.WithErrors(errors);
             }
 
             return await GenerateAuthResponseAsync(user);
@@ -99,8 +103,11 @@ namespace TravelTrek.Infrastructure.Services
                 var identityResult = await _userManager.CreateAsync(user);
                 if (!identityResult.Succeeded)
                 {
-                    var errors = string.Join(", ", identityResult.Errors.Select(e => e.Description));
-                    return Result.Failure<AuthResponse>(Error.Validation("Auth.CreationFailed", errors));
+                    var errors = identityResult.Errors
+                        .Select(e => Error.Validation(e.Code, e.Description))
+                        .ToArray();
+                    
+                    return ValidationResult<AuthResponse>.WithErrors(errors);
                 }
 
                 return await GenerateAuthResponseAsync(user);
@@ -141,7 +148,9 @@ namespace TravelTrek.Infrastructure.Services
                 return Result.Failure<AuthResponse>(Error.Unauthorized("Auth.InvalidToken", "Invalid access token."));
             }
 
-            var userIdClaim = principal.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+            var userIdClaim = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+                              ?? principal.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
+                              
             if (userIdClaim == null || !Guid.TryParse(userIdClaim, out var userId))
             {
                 return Result.Failure<AuthResponse>(Error.Unauthorized("Auth.InvalidToken", "Invalid access token."));

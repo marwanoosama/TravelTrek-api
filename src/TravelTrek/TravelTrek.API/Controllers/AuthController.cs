@@ -1,9 +1,10 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using TravelTrek.Application.DTOs.Auth;
 using TravelTrek.Application.Interfaces;
+using TravelTrek.Domain.Common;
 
 namespace TravelTrek.API.Controllers
 {
@@ -47,13 +48,17 @@ namespace TravelTrek.API.Controllers
 
         [Authorize]
         [HttpPost("revoke-token")]
-        public async Task<IActionResult> RevokeToken([FromBody] string refreshToken)
+        public async Task<IActionResult> RevokeToken([FromBody] RevokeTokenRequest request)
         {
-            var userIdStr = User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier) 
+                            ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+            
             if (!Guid.TryParse(userIdStr, out var userId))
-                return Unauthorized();
+            {
+                return ToActionResult(Result.Failure(Error.Unauthorized("Auth.InvalidToken", "Invalid access token.")));
+            }
 
-            var result = await _authService.RevokeTokenAsync(refreshToken, userId);
+            var result = await _authService.RevokeTokenAsync(request.RefreshToken, userId);
             return ToActionResult(result);
         }
     }

@@ -66,7 +66,6 @@ namespace TravelTrek.Infrastructure.Auth
                     ValidAudience = _jwtSettings.Audience,
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Secret))
                 };
-
                 var tokenHandler = new JwtSecurityTokenHandler();
                 var principal = tokenHandler.ValidateToken(token, validationParameters, out var securityToken); // validates the string token against validationParameters and returns the token as an object
 

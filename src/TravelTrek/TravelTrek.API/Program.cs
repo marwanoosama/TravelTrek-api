@@ -30,7 +30,6 @@ namespace TravelTrek.API
                         var response = new
                         {
                             code = "Validation.Failed",
-                            message = "One or more validation errors occurred",
                             type = "Validation",
                             timestamp = DateTime.UtcNow,
                             errors

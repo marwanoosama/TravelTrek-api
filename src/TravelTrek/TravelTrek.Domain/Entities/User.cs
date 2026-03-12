@@ -32,19 +32,6 @@ namespace TravelTrek.Domain.Entities
         public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
 
 
-        #region Methods
-        public static User FromGooglePayload(string email, string name, string googleId, string? picture)
-        {
-            return new User
-            {
-                Email = email,
-                UserName = email,
-                FullName = name,
-                EmailConfirmed = true,
-                ProfilePictureUrl = picture,
-                GoogleId = googleId
-            };
-        } 
-        #endregion
+       
     }
 }
