@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using TravelTrek.Application.DTOs.Auth;
@@ -18,6 +19,7 @@ namespace TravelTrek.API.Controllers
             _authService = authService;
         }
 
+        [EnableRateLimiting("auth-register")]
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
@@ -25,6 +27,7 @@ namespace TravelTrek.API.Controllers
             return ToActionResult(result);
         }
 
+        [EnableRateLimiting("auth-login")]
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
@@ -32,6 +35,7 @@ namespace TravelTrek.API.Controllers
             return ToActionResult(result);
         }
 
+        [EnableRateLimiting("auth-google")]
         [HttpPost("google")]
         public async Task<IActionResult> Google([FromBody] SignupWithGoogleRequest request)
         {
@@ -39,6 +43,7 @@ namespace TravelTrek.API.Controllers
             return ToActionResult(result);
         }
 
+        [EnableRateLimiting("auth-refresh")]
         [HttpPost("refresh-token")]
         public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenRequest request)
         {
@@ -47,6 +52,7 @@ namespace TravelTrek.API.Controllers
         }
 
         [Authorize]
+        [EnableRateLimiting("auth-revoke")]
         [HttpPost("revoke-token")]
         public async Task<IActionResult> RevokeToken([FromBody] RevokeTokenRequest request)
         {
