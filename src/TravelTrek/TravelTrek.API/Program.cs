@@ -79,6 +79,8 @@ namespace TravelTrek.API
             builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
             builder.Services.AddProblemDetails();
 
+            builder.Services.AddDistributedMemoryCache(); // will be replaced to use redis when deployment
+
             builder.Services.AddInfrastructureServices(builder.Configuration);
 
             var app = builder.Build();
