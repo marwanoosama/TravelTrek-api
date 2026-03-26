@@ -22,6 +22,30 @@ namespace TravelTrek.Infrastructure.Data
         public DbSet<CurrencyInfo> CurrencyInfos => Set<CurrencyInfo>();
         public DbSet<WeatherInfo> WeatherInfos => Set<WeatherInfo>();
 
+        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            var now = DateTime.UtcNow;
+
+            foreach (var entry in ChangeTracker.Entries()
+                .Where(e => e.State == EntityState.Modified))
+            {
+                switch (entry.Entity)
+                {
+                    case User user:
+                        user.UpdatedAt = now;
+                        break;
+                    case TravelPlan plan:
+                        plan.UpdatedAt = now;
+                        break;
+                    case PlanRating rating:
+                        rating.UpdatedAt = now;
+                        break;
+                }
+            }
+
+            return await base.SaveChangesAsync(cancellationToken);
+        }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

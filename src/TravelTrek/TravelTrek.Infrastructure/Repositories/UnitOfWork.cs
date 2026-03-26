@@ -19,7 +19,9 @@ namespace TravelTrek.Infrastructure.Repositories
 
         public void Dispose()
         {
-            _context.Dispose();
+            // AppDbContext lifetime is managed by the DI container (Scoped).
+            // We do NOT dispose it here to avoid ObjectDisposedException
+            // for other services that share the same scoped context.
             GC.SuppressFinalize(this);
         }
     }
