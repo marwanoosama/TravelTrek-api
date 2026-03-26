@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using TravelTrek.Application.Interfaces;
@@ -12,10 +13,12 @@ namespace TravelTrek.Infrastructure.Auth
     public class TokenService : ITokenService
     {
         private readonly JwtSettings _jwtSettings;
+        private readonly ILogger<TokenService> _logger;
 
-        public TokenService(IOptions<JwtSettings> jwtSettings)
+        public TokenService(IOptions<JwtSettings> jwtSettings, ILogger<TokenService> logger)
         {
             _jwtSettings = jwtSettings.Value;
+            _logger = logger;
         }
 
         public string GenerateAccessToken(User user)
@@ -66,19 +69,23 @@ namespace TravelTrek.Infrastructure.Auth
                     ValidAudience = _jwtSettings.Audience,
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Secret))
                 };
+
                 var tokenHandler = new JwtSecurityTokenHandler();
                 var principal = tokenHandler.ValidateToken(token, validationParameters, out var securityToken); // validates the string token against validationParameters and returns the token as an object
 
+                // validate the signing algorithm of the jwt
                 if (securityToken is not JwtSecurityToken jwtToken ||
                     !jwtToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase))
                 {
+                    _logger.LogWarning("Token validation failed — unexpected signing algorithm.");
                     return null;
                 }
 
                 return principal;
             }
-            catch 
+            catch (Exception ex)
             {
+                _logger.LogWarning(ex, "Token validation failed — exception during parsing.");
                 return null;
             }
         }

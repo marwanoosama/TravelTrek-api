@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
-using TravelTrek.Domain.Common;
+using System.Security.Claims;
 using TravelTrek.Domain.Abstractions;
+using TravelTrek.Domain.Common;
 
 namespace TravelTrek.API.Controllers
 {
@@ -63,5 +64,16 @@ namespace TravelTrek.API.Controllers
             ErrorType.External => StatusCodes.Status502BadGateway,
             _ => StatusCodes.Status500InternalServerError
         };
+
+        protected Guid GetUserId()
+        {
+            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!Guid.TryParse(userIdStr, out var userId))
+            {
+                return Guid.Empty;
+            }
+
+            return userId;
+        }
     }
 }

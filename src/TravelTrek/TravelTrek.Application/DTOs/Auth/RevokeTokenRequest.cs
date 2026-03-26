@@ -1,10 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace TravelTrek.Application.DTOs.Auth
-{
-    public class RevokeTokenRequest
-    {
-        [Required]
-        public string RefreshToken { get; set; } = string.Empty;
-    }
-}
+namespace TravelTrek.Application.DTOs.Auth;
+
+public record RevokeTokenRequest(
+    [Required] string RefreshToken
+);

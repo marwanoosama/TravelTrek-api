@@ -7,6 +7,8 @@
 *.userosscache
 *.sln.docstates
 
+
+
 # Build results
 [Dd]ebug/
 [Dd]ebugPublic/
@@ -124,3 +126,6 @@ Thumbs.db
 # BFG Cleaner
 bfg-*.jar
 bfg-*
+
+skills/	
+.agent/

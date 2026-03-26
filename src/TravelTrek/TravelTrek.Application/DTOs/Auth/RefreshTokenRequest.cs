@@ -1,13 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace TravelTrek.Application.DTOs.Auth
-{
-    public class RefreshTokenRequest
-    {
-        [Required]
-        public string AccessToken { get; set; } = string.Empty;
+namespace TravelTrek.Application.DTOs.Auth;
 
-        [Required]
-        public string RefreshToken { get; set; } = string.Empty;
-    }
-}
+public record RefreshTokenRequest(
+    [Required] string AccessToken,
+    [Required] string RefreshToken
+);

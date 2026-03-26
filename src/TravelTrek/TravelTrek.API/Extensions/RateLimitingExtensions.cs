@@ -1,8 +1,11 @@
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Logging;
 using System.Threading.RateLimiting;
 
 namespace TravelTrek.API.Extensions
 {
+    internal sealed class RateLimitingLog { }
+
     public static class RateLimitingExtensions
     {
         public static IServiceCollection AddAuthRateLimiting(this IServiceCollection services)
@@ -13,6 +16,13 @@ namespace TravelTrek.API.Extensions
 
                 options.OnRejected = async (context, cancellationToken) =>
                 {
+                    var ip = context.HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+                    var path = context.HttpContext.Request.Path;
+                    var logger = context.HttpContext.RequestServices
+                        .GetRequiredService<ILogger<RateLimitingLog>>();
+
+                    logger.LogWarning("Rate limit exceeded. IP: {IP}, Endpoint: {Path}", ip, path);
+
                     context.HttpContext.Response.ContentType = "application/json";
                     await context.HttpContext.Response.WriteAsJsonAsync(new
                     {
@@ -52,6 +62,9 @@ namespace TravelTrek.API.Extensions
 
                 // 10 req / 1 min
                 options.AddPolicy("auth-revoke", context =>
+                    SlidingWindow(context.Connection.RemoteIpAddress?.ToString() ?? "unknown", 10, 60, 2));
+
+                options.AddPolicy("revoke-all", context =>
                     SlidingWindow(context.Connection.RemoteIpAddress?.ToString() ?? "unknown", 10, 60, 2));
             });
 

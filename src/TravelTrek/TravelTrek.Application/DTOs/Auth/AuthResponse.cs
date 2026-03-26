@@ -1,9 +1,7 @@
-namespace TravelTrek.Application.DTOs.Auth
-{
-    public class AuthResponse
-    {
-        public string AccessToken { get; set; } = string.Empty;
-        public string RefreshToken { get; set; } = string.Empty;
-        public DateTime ExpiresAt { get; set; }
-    }
-}
+namespace TravelTrek.Application.DTOs.Auth;
+
+public record AuthResponse(
+    string AccessToken,
+    string RefreshToken,
+    DateTime ExpiresAt
+);

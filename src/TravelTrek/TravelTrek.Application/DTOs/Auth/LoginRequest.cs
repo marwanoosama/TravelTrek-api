@@ -1,14 +1,8 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace TravelTrek.Application.DTOs.Auth
-{
-    public class LoginRequest
-    {
-        [Required]
-        [EmailAddress]
-        public string Email { get; set; } = string.Empty;
+namespace TravelTrek.Application.DTOs.Auth;
 
-        [Required]
-        public string Password { get; set; } = string.Empty;
-    }
-}
+public record LoginRequest(
+    [Required][EmailAddress] string Email,
+    [Required][MaxLength(100)] string Password
+);

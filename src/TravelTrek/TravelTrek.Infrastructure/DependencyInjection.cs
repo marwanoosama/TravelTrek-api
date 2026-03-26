@@ -1,3 +1,5 @@
+using System.Net;
+using System.Net.Mail;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -22,7 +24,7 @@ namespace TravelTrek.Infrastructure
             this IServiceCollection services,
             IConfiguration configuration)
         {
-            var connectionString = configuration.GetConnectionString("DefaultConnection")
+            var connectionString = configuration.GetConnectionString("DefaultLinuxConnection")
                 ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
             services.AddDbContext<AppDbContext>(options =>
@@ -38,7 +40,9 @@ namespace TravelTrek.Infrastructure
 
                 options.User.RequireUniqueEmail = true;
 
-                options.Lockout.AllowedForNewUsers = false;
+                options.Lockout.MaxFailedAccessAttempts = 5;
+                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+                options.Lockout.AllowedForNewUsers = true;
             })
             .AddEntityFrameworkStores<AppDbContext>()
             .AddDefaultTokenProviders();
@@ -69,8 +73,26 @@ namespace TravelTrek.Infrastructure
             services.AddScoped<IUnitOfWork, UnitOfWork>();
 
             services.Configure<JwtSettings>(configuration.GetSection("JwtSettings"));
+            services.Configure<GoogleSettings>(configuration.GetSection("Google"));
+            services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
+
+            // FluentEmail configuration
+            var emailSettings = configuration.GetSection("EmailSettings").Get<EmailSettings>()
+                ?? throw new InvalidOperationException("EmailSettings configuration is missing.");
+
+            services
+                .AddFluentEmail(emailSettings.SenderEmail, emailSettings.SenderName)
+                .AddSmtpSender(new SmtpClient(emailSettings.SmtpServer)
+                {
+                    Port = emailSettings.SmtpPort,
+                    Credentials = new NetworkCredential(emailSettings.Username, emailSettings.Password),
+                    EnableSsl = emailSettings.EnableSsl
+                });
+
             services.AddScoped<ITokenService, TokenService>();
             services.AddScoped<IAuthService, AuthService>();
+            services.AddScoped<IUserProfileService, UserProfileService>();
+            services.AddScoped<IEmailService, EmailService>();
 
             return services;
         }

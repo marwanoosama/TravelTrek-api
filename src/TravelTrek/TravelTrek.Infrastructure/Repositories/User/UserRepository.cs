@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using TravelTrek.Domain.Entities;
 using TravelTrek.Domain.Interfaces;
 using TravelTrek.Infrastructure.Data;
 

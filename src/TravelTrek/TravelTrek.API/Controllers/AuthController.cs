@@ -1,8 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 using TravelTrek.Application.DTOs.Auth;
 using TravelTrek.Application.Interfaces;
 using TravelTrek.Domain.Common;
@@ -56,15 +54,66 @@ namespace TravelTrek.API.Controllers
         [HttpPost("revoke-token")]
         public async Task<IActionResult> RevokeToken([FromBody] RevokeTokenRequest request)
         {
-            var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier) 
-                            ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub);
-            
-            if (!Guid.TryParse(userIdStr, out var userId))
+            var userId = GetUserId();
+
+            if (userId == Guid.Empty)
             {
                 return ToActionResult(Result.Failure(Error.Unauthorized("Auth.InvalidToken", "Invalid access token.")));
             }
 
             var result = await _authService.RevokeTokenAsync(request.RefreshToken, userId);
+            return ToActionResult(result);
+        }
+
+        [Authorize]
+        [EnableRateLimiting("revoke-all")]
+        [HttpPost("revoke-all")]
+        public async Task<IActionResult> RevokeAll()
+        {
+            var userId = GetUserId();
+
+            if (userId == Guid.Empty)
+            {
+                return ToActionResult(Result.Failure(Error.Unauthorized("Auth.InvalidToken", "Invalid access token.")));
+            }
+
+            var result = await _authService.RevokeAllTokensAsync(userId);
+            return ToActionResult(result);
+        }
+
+        [HttpGet("confirm-email")]
+        public async Task<IActionResult> ConfirmEmail([FromQuery] Guid userId, [FromQuery] string token)
+        {
+            if (userId == Guid.Empty || string.IsNullOrWhiteSpace(token))
+            {
+                return ToActionResult(Result.Failure(Error.Validation("Auth.InvalidRequest", "User ID and token are required.")));
+            }
+
+            var result = await _authService.ConfirmEmailAsync(userId, token);
+            return ToActionResult(result);
+        }
+
+        [EnableRateLimiting("auth-register")]
+        [HttpPost("resend-confirmation")]
+        public async Task<IActionResult> ResendConfirmation([FromBody] ResendConfirmationRequest request)
+        {
+            var result = await _authService.ResendConfirmationEmailAsync(request.Email);
+            return ToActionResult(result);
+        }
+
+        [EnableRateLimiting("auth-register")]
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+        {
+            var result = await _authService.ForgotPasswordAsync(request);
+            return ToActionResult(result);
+        }
+
+        [EnableRateLimiting("auth-register")]
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+        {
+            var result = await _authService.ResetPasswordAsync(request);
             return ToActionResult(result);
         }
     }

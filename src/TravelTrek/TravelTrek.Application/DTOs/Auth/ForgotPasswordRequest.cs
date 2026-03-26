@@ -2,6 +2,6 @@ using System.ComponentModel.DataAnnotations;
 
 namespace TravelTrek.Application.DTOs.Auth;
 
-public record SignupWithGoogleRequest(
-    [Required] string IdToken
+public record ForgotPasswordRequest(
+    [Required][EmailAddress] string Email
 );

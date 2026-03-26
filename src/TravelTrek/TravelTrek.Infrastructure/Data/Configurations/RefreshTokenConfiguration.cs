@@ -23,7 +23,6 @@ namespace TravelTrek.Infrastructure.Data.Configurations
             builder.Property(r => r.CreatedAt)
                 .HasDefaultValueSql("GETUTCDATE()");
 
-            // computed properties
             builder.Ignore(r => r.IsExpired);
             builder.Ignore(r => r.IsRevoked);
             builder.Ignore(r => r.IsActive);

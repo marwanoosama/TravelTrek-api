@@ -10,5 +10,10 @@ namespace TravelTrek.Application.Interfaces
         Task<Result<AuthResponse>> SignupWithGoogleAsync(SignupWithGoogleRequest request);
         Task<Result<AuthResponse>> RefreshTokenAsync(RefreshTokenRequest request);
         Task<Result> RevokeTokenAsync(string refreshToken, Guid userId);
+        Task<Result> RevokeAllTokensAsync(Guid userId);
+        Task<Result> ConfirmEmailAsync(Guid userId, string token);
+        Task<Result> ResendConfirmationEmailAsync(string email);
+        Task<Result> ForgotPasswordAsync(ForgotPasswordRequest request);
+        Task<Result> ResetPasswordAsync(ResetPasswordRequest request);
     }
 }

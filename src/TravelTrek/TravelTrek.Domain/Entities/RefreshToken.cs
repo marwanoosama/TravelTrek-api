@@ -14,7 +14,6 @@
         public bool IsRevoked => RevokedAt != null;
         public bool IsActive => !IsExpired && !IsRevoked;
 
-        // Navigation property
         public User User { get; set; } = null!;
     }
 }

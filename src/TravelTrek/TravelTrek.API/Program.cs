@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Serilog;
 using TravelTrek.API.Extensions;
 using TravelTrek.API.Middleware;
 using TravelTrek.Infrastructure;
@@ -10,33 +11,53 @@ namespace TravelTrek.API
     {
         public static async Task Main(string[] args)
         {
-            var builder = WebApplication.CreateBuilder(args);
+            Log.Logger = new LoggerConfiguration().WriteTo.Console().CreateBootstrapLogger();
 
-            builder.Services.AddApiControllers();
-            builder.Services.AddSwaggerWithAuth();
-            builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
-            builder.Services.AddProblemDetails();
-            builder.Services.AddDistributedMemoryCache(); // will be replaced to use redis when deployment
-            builder.Services.AddAuthRateLimiting();
-            builder.Services.AddInfrastructureServices(builder.Configuration);
+            Log.Information("TravelTrek API starting up...");
 
-            var app = builder.Build();
-
-            using (var scope = app.Services.CreateScope())
+            try
             {
-                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                await db.Database.MigrateAsync();
+                var builder = WebApplication.CreateBuilder(args);
+
+                builder.Host.AddSerilogLogging();
+
+                builder.Services.AddApiControllers();
+                builder.Services.AddSwaggerWithAuth();
+                builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+                builder.Services.AddProblemDetails();
+                builder.Services.AddAuthRateLimiting();
+                builder.Services.AddInfrastructureServices(builder.Configuration);
+
+                var app = builder.Build();
+
+                using (var scope = app.Services.CreateScope())
+                {
+                    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                    Log.Information("Applying database migrations...");
+                    await db.Database.MigrateAsync();
+                    Log.Information("Database migrations applied successfully.");
+                }
+
+                app.UseExceptionHandler();
+                app.UseSerilog();
+                app.UseSwaggerInDevelopment();
+                app.UseHttpsRedirection();
+                app.UseRateLimiter();
+                app.UseAuthentication();
+                app.UseAuthorization();
+                app.MapControllers();
+
+                Log.Information("TravelTrek API started successfully.");
+                app.Run();
             }
-
-            app.UseExceptionHandler();
-            app.UseSwaggerInDevelopment();
-            app.UseHttpsRedirection();
-            app.UseRateLimiter();
-            app.UseAuthentication();
-            app.UseAuthorization();
-            app.MapControllers();
-
-            app.Run();
+            catch (Exception ex)
+            {
+                Log.Fatal(ex, "TravelTrek API failed to start.");
+            }
+            finally
+            {
+                await Log.CloseAndFlushAsync();
+            }
         }
     }
 }
