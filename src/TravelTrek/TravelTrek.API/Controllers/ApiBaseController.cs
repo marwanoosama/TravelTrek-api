@@ -11,7 +11,7 @@ namespace TravelTrek.API.Controllers
         protected IActionResult ToActionResult<T>(Result<T> result)
         {
             if (result.IsSuccess)
-                return Ok(result.Value);
+                return Ok(result);
 
             // Handle multiple validation errors
             if (result is IValidationResult validationResult && validationResult.Errors.Length > 0)
@@ -62,6 +62,7 @@ namespace TravelTrek.API.Controllers
             ErrorType.Unauthorized => StatusCodes.Status401Unauthorized,
             ErrorType.Forbidden => StatusCodes.Status403Forbidden,
             ErrorType.External => StatusCodes.Status502BadGateway,
+            ErrorType.TooManyRequests => StatusCodes.Status429TooManyRequests,
             _ => StatusCodes.Status500InternalServerError
         };
 

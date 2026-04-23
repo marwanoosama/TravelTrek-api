@@ -70,6 +70,9 @@ namespace TravelTrek.Domain.Common
         /// </summary>
         public static Error External(string code, string description) =>
             new(code, description, ErrorType.External);
+        
+        public static Error TooManyRequests(string code, string description) =>
+            new(code, description, ErrorType.TooManyRequests);
 
         public bool Equals(Error? other)
         {

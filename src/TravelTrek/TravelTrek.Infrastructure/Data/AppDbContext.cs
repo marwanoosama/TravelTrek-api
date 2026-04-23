@@ -12,15 +12,6 @@ namespace TravelTrek.Infrastructure.Data
         }
 
         public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
-        public DbSet<TravelPlan> TravelPlans => Set<TravelPlan>();
-        public DbSet<ItineraryDay> ItineraryDays => Set<ItineraryDay>();
-        public DbSet<ItineraryActivity> ItineraryActivities => Set<ItineraryActivity>();
-        public DbSet<RecommendedPlace> RecommendedPlaces => Set<RecommendedPlace>();
-        public DbSet<TravelTip> TravelTips => Set<TravelTip>();
-        public DbSet<Recommendation> Recommendations => Set<Recommendation>();
-        public DbSet<PlanRating> PlanRatings => Set<PlanRating>();
-        public DbSet<CurrencyInfo> CurrencyInfos => Set<CurrencyInfo>();
-        public DbSet<WeatherInfo> WeatherInfos => Set<WeatherInfo>();
 
         public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
@@ -33,12 +24,6 @@ namespace TravelTrek.Infrastructure.Data
                 {
                     case User user:
                         user.UpdatedAt = now;
-                        break;
-                    case TravelPlan plan:
-                        plan.UpdatedAt = now;
-                        break;
-                    case PlanRating rating:
-                        rating.UpdatedAt = now;
                         break;
                 }
             }

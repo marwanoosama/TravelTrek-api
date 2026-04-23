@@ -38,6 +38,9 @@ namespace TravelTrek.Domain.Common
         /// <summary>
         /// External service error (API, Database, etc.)
         /// </summary>
-        External
+        External,
+        
+        
+        TooManyRequests
     }
 }

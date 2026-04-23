@@ -12,9 +12,11 @@ using TravelTrek.Domain.Entities;
 using TravelTrek.Domain.Interfaces;
 using TravelTrek.Infrastructure.Auth;
 using TravelTrek.Infrastructure.Data;
+using TravelTrek.Infrastructure.Data.Configurations;
 using TravelTrek.Infrastructure.Repositories;
 using TravelTrek.Infrastructure.Repositories.User;
 using TravelTrek.Infrastructure.Services;
+using TravelTrek.Infrastructure.Services.OpenTrip;
 
 namespace TravelTrek.Infrastructure
 {
@@ -93,6 +95,10 @@ namespace TravelTrek.Infrastructure
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IUserProfileService, UserProfileService>();
             services.AddScoped<IEmailService, EmailService>();
+            services.AddScoped<IOpenTripMapService, OpenTripMapService>();
+            
+            services.Configure<OpenTripMapApiOptions>(configuration.GetSection("OpenTripMapAPI"));
+
 
             return services;
         }

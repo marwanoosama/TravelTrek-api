@@ -2,8 +2,10 @@ using Microsoft.EntityFrameworkCore;
 using Serilog;
 using TravelTrek.API.Extensions;
 using TravelTrek.API.Middleware;
+using TravelTrek.Application.Interfaces;
 using TravelTrek.Infrastructure;
 using TravelTrek.Infrastructure.Data;
+using TravelTrek.Infrastructure.Services.OpenTrip;
 
 namespace TravelTrek.API
 {
@@ -27,6 +29,13 @@ namespace TravelTrek.API
                 builder.Services.AddProblemDetails();
                 builder.Services.AddAuthRateLimiting();
                 builder.Services.AddInfrastructureServices(builder.Configuration);
+
+                builder.Services.AddHttpClient<IOpenTripMapService, OpenTripMapService>(client =>
+                {
+                    client.BaseAddress = new Uri(builder.Configuration["OpenTripMapAPI:BaseUrl"]!);
+                    client.Timeout = TimeSpan.FromSeconds(15);
+                });
+                // .AddStandardResilienceHandler(); // Retry + Circuit Breaker + Timeout built-in
 
                 var app = builder.Build();
 

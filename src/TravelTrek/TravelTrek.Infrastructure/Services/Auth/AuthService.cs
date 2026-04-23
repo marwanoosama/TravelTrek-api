@@ -58,6 +58,7 @@ namespace TravelTrek.Infrastructure.Services
 
             if (await _userManager.IsLockedOutAsync(user))
             {
+                _logger.LogWarning("Login failed — account locked-out. Email: {Email}", request.Email);
                 return Result.Failure<AuthResponse>(Error.Unauthorized("Auth.LockedOut", "Account locked. Try again later."));
             }
 
