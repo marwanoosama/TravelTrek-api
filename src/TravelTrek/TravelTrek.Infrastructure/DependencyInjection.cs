@@ -17,6 +17,7 @@ using TravelTrek.Infrastructure.Repositories;
 using TravelTrek.Infrastructure.Repositories.User;
 using TravelTrek.Infrastructure.Services;
 using TravelTrek.Infrastructure.Services.OpenTrip;
+using TravelTrek.Infrastructure.Services.Weather;
 
 namespace TravelTrek.Infrastructure
 {
@@ -26,7 +27,7 @@ namespace TravelTrek.Infrastructure
             this IServiceCollection services,
             IConfiguration configuration)
         {
-            var connectionString = configuration.GetConnectionString("DefaultLinuxConnection")
+            var connectionString = configuration.GetConnectionString("DefaultConnection")
                 ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
             services.AddDbContext<AppDbContext>(options =>
@@ -95,10 +96,18 @@ namespace TravelTrek.Infrastructure
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IUserProfileService, UserProfileService>();
             services.AddScoped<IEmailService, EmailService>();
-            services.AddScoped<IOpenTripMapService, OpenTripMapService>();
-            
+
+            // OpenTripMap API (typed HttpClient registered in Program.cs)
             services.Configure<OpenTripMapApiOptions>(configuration.GetSection("OpenTripMapAPI"));
 
+            // OpenWeather API
+            services.Configure<OpenWeatherApiOptions>(configuration.GetSection("OpenWeather"));
+            services.AddHttpClient<IOpenWeatherService, OpenWeatherService>(client =>
+            {
+                client.BaseAddress = new Uri(configuration["OpenWeather:BaseUrl"]!);
+                client.Timeout = TimeSpan.FromSeconds(15);
+            })
+            .AddStandardResilienceHandler();
 
             return services;
         }
