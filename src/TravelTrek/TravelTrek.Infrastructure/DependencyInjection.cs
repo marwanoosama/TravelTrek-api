@@ -101,10 +101,13 @@ namespace TravelTrek.Infrastructure
             services.Configure<OpenTripMapApiOptions>(configuration.GetSection("OpenTripMapAPI"));
 
             // OpenWeather API
-            services.Configure<OpenWeatherApiOptions>(configuration.GetSection("OpenWeather"));
+            services.AddOptionsWithValidateOnStart<OpenWeatherApiOptions>()
+                .Bind(configuration.GetSection(OpenWeatherApiOptions.SectionName))
+                .ValidateDataAnnotations();
+
             services.AddHttpClient<IOpenWeatherService, OpenWeatherService>(client =>
             {
-                client.BaseAddress = new Uri(configuration["OpenWeather:BaseUrl"]!);
+                client.BaseAddress = new Uri(configuration[$"{OpenWeatherApiOptions.SectionName}:BaseUrl"]!);
                 client.Timeout = TimeSpan.FromSeconds(15);
             })
             .AddStandardResilienceHandler();

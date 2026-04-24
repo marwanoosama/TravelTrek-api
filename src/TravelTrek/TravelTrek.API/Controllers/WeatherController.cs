@@ -14,8 +14,8 @@ namespace TravelTrek.API.Controllers
             _weatherService = weatherService;
         }
 
-        [HttpGet("test")]
-        public async Task<IActionResult> Test([FromQuery] double lat, [FromQuery] double lon)
+        [HttpGet("current")]
+        public async Task<IActionResult> GetCurrentWeather([FromQuery] double lat, [FromQuery] double lon)
         {
             var result = await _weatherService.GetCurrentWeatherAsync(new WeatherRequest(lat, lon));
             return ToActionResult(result);
