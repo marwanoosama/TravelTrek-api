@@ -8,16 +8,48 @@ namespace TravelTrek.API.Controllers
     public class WeatherController : ApiBaseController
     {
         private readonly IOpenWeatherService _weatherService;
+        private readonly IOpenTripMapService _openTripMapService;
 
-        public WeatherController(IOpenWeatherService weatherService)
+        public WeatherController(
+            IOpenWeatherService weatherService,
+            IOpenTripMapService openTripMapService)
         {
             _weatherService = weatherService;
+            _openTripMapService = openTripMapService;
         }
 
-        [HttpGet("current")]
-        public async Task<IActionResult> GetCurrentWeather([FromQuery] double lat, [FromQuery] double lon)
+        /// <summary>
+        /// Get weather by city name — uses OpenTripMap geocode to resolve lat/lon automatically.
+        /// </summary>
+        [HttpGet("city")]
+        public async Task<IActionResult> GetWeatherByCity(
+            [FromQuery] string name,
+            CancellationToken ct)
         {
-            var result = await _weatherService.GetCurrentWeatherAsync(new WeatherRequest(lat, lon));
+            var geocodeResult = await _openTripMapService.GetCityGeocode(name, ct);
+
+            if (geocodeResult.IsFailure)
+                return ToActionResult(geocodeResult);
+
+            var geocode = geocodeResult.Value;
+            var weatherResult = await _weatherService.GetCurrentWeatherAsync(
+                new WeatherRequest(geocode.Lat, geocode.Lon), ct);
+
+            return ToActionResult(weatherResult);
+        }
+
+        /// <summary>
+        /// Get weather by coordinates directly.
+        /// </summary>
+        [HttpGet("current")]
+        public async Task<IActionResult> GetCurrentWeather(
+            [FromQuery] double lat,
+            [FromQuery] double lon,
+            CancellationToken ct)
+        {
+            var result = await _weatherService.GetCurrentWeatherAsync(
+                new WeatherRequest(lat, lon), ct);
+
             return ToActionResult(result);
         }
     }
