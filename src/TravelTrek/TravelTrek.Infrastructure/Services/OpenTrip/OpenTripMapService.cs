@@ -1,6 +1,8 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TravelTrek.Application.DTOs.Auth;
 using TravelTrek.Application.DTOs.OpenTrip;
@@ -14,139 +16,158 @@ public class OpenTripMapService : IOpenTripMapService
 {
     private readonly HttpClient _httpClient;
     private readonly OpenTripMapApiOptions _options;
+    private readonly ILogger<OpenTripMapService> _logger;
 
-    public OpenTripMapService(HttpClient httpClient, IOptions<OpenTripMapApiOptions> options)
+    public OpenTripMapService(
+        HttpClient httpClient,
+        IOptions<OpenTripMapApiOptions> options,
+        ILogger<OpenTripMapService> logger)
     {
         _httpClient = httpClient;
         _options = options.Value;
+        _logger = logger;
     }
     
     public async Task<Result<GeocodeResponse>> GetCityGeocode(string name, CancellationToken ct = default)
     {
         var response = await _httpClient.GetAsync(
             $"geoname" +
-            $"?name={new UriBuilder(name)}" +
-            $"&apikey={_options.ApiKey}",
+            $"?name={Uri.EscapeDataString(name)}" +
+            $"&apikey={Uri.EscapeDataString(_options.ApiKey)}",
             ct);
 
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
-            return Result.Failure<GeocodeResponse>(Error.NotFound("OpenTripMap.Unauthorized",
-                "Invalid or missing OpenTripMap Api key."));
+            return Result.Failure<GeocodeResponse>(Error.Unauthorized(
+                "OpenTripMap.Unauthorized",
+                "Invalid or missing OpenTripMap API key."));
         }
 
         if (response.StatusCode == HttpStatusCode.TooManyRequests)
         {
-            return Result.Failure<GeocodeResponse>(Error.TooManyRequests("OpenTripMap.RateLimited",
+            return Result.Failure<GeocodeResponse>(Error.TooManyRequests(
+                "OpenTripMap.RateLimited",
                 "Rate limit exceeded."));
         }
+
         if (response.StatusCode == HttpStatusCode.BadRequest)
         {
-            return Result.Failure<GeocodeResponse>(Error.Validation("OpenTripMap.Validation",
+            return Result.Failure<GeocodeResponse>(Error.Validation(
+                "OpenTripMap.Validation",
                 "Invalid request parameters sent to OpenTripMap."));
         }
-        if (!response.IsSuccessStatusCode)
+
+        if ((int)response.StatusCode >= 500)
         {
-            return Result.Failure<GeocodeResponse>(Error.Internal("OpenTripMap.Error",
-                $"Unexpected response: {(int)response.StatusCode}"));
+            return Result.Failure<GeocodeResponse>(Error.External(
+                "OpenTripMap.ServerError",
+                $"OpenTripMap server error: {(int)response.StatusCode}."));
         }
 
-        var parseResult = await ParseGeocodeResponseAsync(response, ct);
-        return parseResult;
+        if (!response.IsSuccessStatusCode)
+        {
+            return Result.Failure<GeocodeResponse>(Error.Internal(
+                "OpenTripMap.Error",
+                $"Unexpected response: {(int)response.StatusCode}."));
+        }
+
+        try
+        {
+            var value = await response.Content.ReadFromJsonAsync<GeocodeResponse>(ct);
+
+            if (value is null)
+            {
+                return Result.Failure<GeocodeResponse>(Error.Internal(
+                    "OpenTripMap.EmptyResponse",
+                    "Empty response from OpenTripMap."));
+            }
+
+            return Result.Success(value);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogWarning(ex, "Failed to parse OpenTripMap geocode response.");
+            return Result.Failure<GeocodeResponse>(Error.Internal(
+                "OpenTripMap.ParseError",
+                "Failed to parse OpenTripMap geocode response."));
+        }
     }
 
     public async Task<Result<List<RadiusResponse>>> GetPlacesByRadiusAsync(RadiusRequest request, CancellationToken ct = default)
     {
+        var radius = Uri.EscapeDataString(request.Radius.ToString(CultureInfo.InvariantCulture));
+        var lon = Uri.EscapeDataString(request.Lon.ToString(CultureInfo.InvariantCulture));
+        var lat = Uri.EscapeDataString(request.Lat.ToString(CultureInfo.InvariantCulture));
+        var kinds = Uri.EscapeDataString(request.Kinds);
+        var rate = Uri.EscapeDataString(request.Rate);
+        var apiKey = Uri.EscapeDataString(_options.ApiKey);
+        
         var response = await _httpClient.GetAsync(
             $"radius" +
-            $"?radius={request.Radius}" +
-            $"&lon={request.Lon}" +
-            $"&lat={request.Lat}" +
-            $"&kinds={request.Kinds}" +
-            $"&rate={request.Rate}" +
+            $"?radius={radius}" +
+            $"&lon={lon}" +
+            $"&lat={lat}" +
+            $"&kinds={kinds}" +
+            $"&rate={rate}" +
             $"&format=json" +
-            $"&apikey={_options.ApiKey}",
+            $"&apikey={apiKey}",
             ct);
         
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
-            return Result.Failure<List<RadiusResponse>>(Error.NotFound("OpenTripMap.Unauthorized",
-                "Invalid or missing OpenTripMap Api key."));
+            return Result.Failure<List<RadiusResponse>>(Error.Unauthorized(
+                "OpenTripMap.Unauthorized",
+                "Invalid or missing OpenTripMap API key."));
         }
+        
         if (response.StatusCode == HttpStatusCode.TooManyRequests)
         {
-            return Result.Failure<List<RadiusResponse>>(Error.TooManyRequests("OpenTripMap.RateLimited",
+            return Result.Failure<List<RadiusResponse>>(Error.TooManyRequests(
+                "OpenTripMap.RateLimited",
                 "Rate limit exceeded."));
         }
+        
         if (response.StatusCode == HttpStatusCode.BadRequest)
         {
-            return Result.Failure<List<RadiusResponse>>(Error.Validation("OpenTripMap.Validation",
+            return Result.Failure<List<RadiusResponse>>(Error.Validation(
+                "OpenTripMap.Validation",
                 "Invalid request parameters sent to OpenTripMap."));
+        }
+        
+        if ((int)response.StatusCode >= 500)
+        {
+            return Result.Failure<List<RadiusResponse>>(Error.External(
+                "OpenTripMap.ServerError",
+                $"OpenTripMap server error: {(int)response.StatusCode}."));
         }
         
         if (!response.IsSuccessStatusCode)
         {
-            return Result.Failure<List<RadiusResponse>>(Error.Internal("OpenTripMap.Error",
-                $"Unexpected response: {(int)response.StatusCode}"));
+            return Result.Failure<List<RadiusResponse>>(Error.Internal(
+                "OpenTripMap.Error",
+                $"Unexpected response: {(int)response.StatusCode}."));
         }
-
-        var parseResult = await ParsePlacesByRadiusResponseAsync(response, ct);
-        return parseResult;
-    }
-
-
-    #region Helpers
-
-    private async Task<Result<List<RadiusResponse>>> ParsePlacesByRadiusResponseAsync(HttpResponseMessage response, CancellationToken ct)
-    {
-        List<RadiusResponse>? value;
-    
-        try
-        {
-            value = await response.Content.ReadFromJsonAsync<List<RadiusResponse>>(ct);
-        }
-        catch(JsonException)
-        {
-            return Result.Failure<List<RadiusResponse>>(
-                Error.Internal("OpenTripMap.ParseError", "Failed to parse places by radius response."));
-        }
-    
-        if (value is null)
-        {
-            return Result.Failure<List<RadiusResponse>>(
-                Error.Internal("OpenTripMap.EmptyResponse", "Empty response from places by radius endpoint."));
-        }
-
-        return Result.Success(value);
-    }
-    private async Task<Result<GeocodeResponse>> ParseGeocodeResponseAsync(HttpResponseMessage response, CancellationToken ct)
-    {
-        GeocodeResponse? value;
 
         try
         {
-            value = await response.Content.ReadFromJsonAsync<GeocodeResponse>(ct);
-        }
-        catch (JsonException)
-        {
-            return Result.Failure<GeocodeResponse>(
-                Error.Internal("OpenTripMap.ParseError", "Failed to parse geocode response."));
-        }
+            var value = await response.Content.ReadFromJsonAsync<List<RadiusResponse>>(ct);
+            
+            if (value is null)
+            {
+                return Result.Failure<List<RadiusResponse>>(Error.Internal(
+                    "OpenTripMap.EmptyResponse",
+                    "Empty response from OpenTripMap."));
+            }
 
-        if (value is null)
-        {
-            return Result.Failure<GeocodeResponse>(
-                Error.Internal("OpenTripMap.EmptyResponse", "Empty response from geocode endpoint."));
+            return Result.Success(value);
         }
-
-        if (value.Status == "NOT_FOUND")
+        catch (JsonException ex)
         {
-            return Result.Failure<GeocodeResponse>(
-                Error.NotFound("OpenTripMap.NotFound", $"City '{value.Name}' could not be found."));
+            _logger.LogWarning(ex, "Failed to parse OpenTripMap radius response.");
+            return Result.Failure<List<RadiusResponse>>(Error.Internal(
+                "OpenTripMap.ParseError",
+                "Failed to parse OpenTripMap radius response."));
         }
-
-        return Result.Success(value);
     }
 
-    #endregion
 }

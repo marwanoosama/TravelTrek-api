@@ -27,61 +27,79 @@ namespace TravelTrek.Infrastructure
             this IServiceCollection services,
             IConfiguration configuration)
         {
+            #region Database
+
             var connectionString = configuration.GetConnectionString("DefaultConnection")
-                ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+                                   ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
             services.AddDbContext<AppDbContext>(options =>
                 options.UseSqlServer(connectionString));
 
+            #endregion
+
+            #region Identity User
+
             services.AddIdentity<User, IdentityRole<Guid>>(options =>
-            {
-                options.Password.RequireDigit = true;
-                options.Password.RequireUppercase = true;
-                options.Password.RequireLowercase = true;
-                options.Password.RequiredLength = 8;
-                options.Password.RequireNonAlphanumeric = false;
+                {
+                    options.Password.RequireDigit = true;
+                    options.Password.RequireUppercase = true;
+                    options.Password.RequireLowercase = true;
+                    options.Password.RequiredLength = 8;
+                    options.Password.RequireNonAlphanumeric = false;
 
-                options.User.RequireUniqueEmail = true;
+                    options.User.RequireUniqueEmail = true;
 
-                options.Lockout.MaxFailedAccessAttempts = 5;
-                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
-                options.Lockout.AllowedForNewUsers = true;
-            })
-            .AddEntityFrameworkStores<AppDbContext>()
-            .AddDefaultTokenProviders();
+                    options.Lockout.MaxFailedAccessAttempts = 5;
+                    options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+                    options.Lockout.AllowedForNewUsers = true;
+                })
+                .AddEntityFrameworkStores<AppDbContext>()
+                .AddDefaultTokenProviders();
+
+            #endregion
+
+            #region JWT Authentication
 
             services.AddAuthentication(options =>
-            {
-                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-            })
-            .AddJwtBearer(options =>
-            {
-                var secret = configuration["JwtSettings:Secret"]!;
-                options.TokenValidationParameters = new TokenValidationParameters
                 {
-                    ValidateIssuer = true,
-                    ValidateAudience = true,
-                    ValidateLifetime = true,
-                    ValidateIssuerSigningKey = true,
-                    ValidIssuer = configuration["JwtSettings:Issuer"],
-                    ValidAudience = configuration["JwtSettings:Audience"],
-                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
-                    ClockSkew = TimeSpan.Zero
-                };
-            });
+                    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+                })
+                .AddJwtBearer(options =>
+                {
+                    var secret = configuration["JwtSettings:Secret"]!;
+                    options.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateIssuer = true,
+                        ValidateAudience = true,
+                        ValidateLifetime = true,
+                        ValidateIssuerSigningKey = true,
+                        ValidIssuer = configuration["JwtSettings:Issuer"],
+                        ValidAudience = configuration["JwtSettings:Audience"],
+                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
+                        ClockSkew = TimeSpan.Zero
+                    };
+                });
+
+            #endregion
+
+            #region Repositories & UOF
 
             services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
             services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IUnitOfWork, UnitOfWork>();
 
+            #endregion
+
             services.Configure<JwtSettings>(configuration.GetSection("JwtSettings"));
             services.Configure<GoogleSettings>(configuration.GetSection("Google"));
             services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
 
+            #region FluentEmail
+
             // FluentEmail configuration
             var emailSettings = configuration.GetSection("EmailSettings").Get<EmailSettings>()
-                ?? throw new InvalidOperationException("EmailSettings configuration is missing.");
+                                ?? throw new InvalidOperationException("EmailSettings configuration is missing.");
 
             services
                 .AddFluentEmail(emailSettings.SenderEmail, emailSettings.SenderName)
@@ -92,13 +110,33 @@ namespace TravelTrek.Infrastructure
                     EnableSsl = emailSettings.EnableSsl
                 });
 
+            #endregion
+
+            #region Services
+
             services.AddScoped<ITokenService, TokenService>();
             services.AddScoped<IAuthService, AuthService>();
             services.AddScoped<IUserProfileService, UserProfileService>();
             services.AddScoped<IEmailService, EmailService>();
 
-            // OpenTripMap API (typed HttpClient registered in Program.cs)
-            services.Configure<OpenTripMapApiOptions>(configuration.GetSection("OpenTripMapAPI"));
+            #endregion
+
+            #region OpenTripMap
+
+            services.AddHttpClient<IOpenTripMapService, OpenTripMapService>(client =>
+                {
+                    client.BaseAddress = new Uri(configuration[$"{OpenTripMapApiOptions.SectionName}:BaseUrl"]!);
+                    client.Timeout = TimeSpan.FromSeconds(15);
+                })
+                .AddStandardResilienceHandler();
+
+            services.AddOptionsWithValidateOnStart<OpenTripMapApiOptions>()
+                .Bind(configuration.GetSection(OpenTripMapApiOptions.SectionName))
+                .ValidateDataAnnotations();
+
+            #endregion
+
+            #region OpenWeather
 
             // OpenWeather API
             services.AddOptionsWithValidateOnStart<OpenWeatherApiOptions>()
@@ -106,11 +144,13 @@ namespace TravelTrek.Infrastructure
                 .ValidateDataAnnotations();
 
             services.AddHttpClient<IOpenWeatherService, OpenWeatherService>(client =>
-            {
-                client.BaseAddress = new Uri(configuration[$"{OpenWeatherApiOptions.SectionName}:BaseUrl"]!);
-                client.Timeout = TimeSpan.FromSeconds(15);
-            })
-            .AddStandardResilienceHandler();
+                {
+                    client.BaseAddress = new Uri(configuration[$"{OpenWeatherApiOptions.SectionName}:BaseUrl"]!);
+                    client.Timeout = TimeSpan.FromSeconds(15);
+                })
+                .AddStandardResilienceHandler();
+
+            #endregion
 
             return services;
         }

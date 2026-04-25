@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using TravelTrek.Application.DTOs.Auth;
 using TravelTrek.Application.DTOs.OpenTrip;
 using TravelTrek.Application.Interfaces;
 

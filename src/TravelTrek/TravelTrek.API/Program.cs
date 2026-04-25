@@ -30,13 +30,6 @@ namespace TravelTrek.API
                 builder.Services.AddAuthRateLimiting();
                 builder.Services.AddInfrastructureServices(builder.Configuration);
 
-                builder.Services.AddHttpClient<IOpenTripMapService, OpenTripMapService>(client =>
-                {
-                    client.BaseAddress = new Uri(builder.Configuration["OpenTripMapAPI:BaseUrl"]!);
-                    client.Timeout = TimeSpan.FromSeconds(15);
-                });
-                // .AddStandardResilienceHandler(); // Retry + Circuit Breaker + Timeout built-in
-
                 var app = builder.Build();
 
                 using (var scope = app.Services.CreateScope())

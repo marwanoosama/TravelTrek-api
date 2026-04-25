@@ -96,4 +96,74 @@ public class OpenWeatherService : IOpenWeatherService
                 "Failed to parse OpenWeather response."));
         }
     }
+
+    public async Task<Result<ForecastResponse>> GetForecastAsync(
+        WeatherRequest request,
+        CancellationToken ct = default)
+    {
+        var lat = Uri.EscapeDataString(request.Latitude.ToString(CultureInfo.InvariantCulture));
+        var lon = Uri.EscapeDataString(request.Longitude.ToString(CultureInfo.InvariantCulture));
+        var units = Uri.EscapeDataString("metric");
+        var apiKey = Uri.EscapeDataString(_options.ApiKey);
+
+        var response = await _httpClient.GetAsync(
+            $"forecast?lat={lat}&lon={lon}&appid={apiKey}&units={units}",
+            ct);
+
+        if (response.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            return Result.Failure<ForecastResponse>(Error.Unauthorized(
+                "OpenWeather.Unauthorized",
+                "Invalid or missing OpenWeather API key."));
+        }
+
+        if (response.StatusCode == HttpStatusCode.TooManyRequests)
+        {
+            return Result.Failure<ForecastResponse>(Error.TooManyRequests(
+                "OpenWeather.RateLimited",
+                "Rate limit exceeded."));
+        }
+
+        if (response.StatusCode == HttpStatusCode.BadRequest)
+        {
+            return Result.Failure<ForecastResponse>(Error.Validation(
+                "OpenWeather.Validation",
+                "Invalid request parameters sent to OpenWeather."));
+        }
+
+        if ((int)response.StatusCode >= 500)
+        {
+            return Result.Failure<ForecastResponse>(Error.External(
+                "OpenWeather.ServerError",
+                $"OpenWeather server error: {(int)response.StatusCode}."));
+        }
+
+        if (!response.IsSuccessStatusCode)
+        {
+            return Result.Failure<ForecastResponse>(Error.Internal(
+                "OpenWeather.Error",
+                $"Unexpected response: {(int)response.StatusCode}."));
+        }
+
+        try
+        {
+            var value = await response.Content.ReadFromJsonAsync<ForecastResponse>(ct);
+
+            if (value is null)
+            {
+                return Result.Failure<ForecastResponse>(Error.Internal(
+                    "OpenWeather.EmptyResponse",
+                    "Empty response from OpenWeather."));
+            }
+
+            return Result.Success(value);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogWarning(ex, "Failed to parse OpenWeather forecast response.");
+            return Result.Failure<ForecastResponse>(Error.Internal(
+                "OpenWeather.ParseError",
+                "Failed to parse OpenWeather forecast response."));
+        }
+    }
 }

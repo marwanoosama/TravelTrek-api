@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace TravelTrek.Application.DTOs.Weather;
 
-public record WeatherRequest(
+public record WeatherRequest(   
     [property: Required]
     [property: Range(-90, 90, ErrorMessage = "Latitude must be between -90 and 90.")]
     double Latitude,
