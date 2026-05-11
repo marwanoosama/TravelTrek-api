@@ -18,6 +18,7 @@ using TravelTrek.Infrastructure.Repositories.User;
 using TravelTrek.Infrastructure.Services;
 using TravelTrek.Infrastructure.Services.OpenTrip;
 using TravelTrek.Infrastructure.Services.Weather;
+using TravelTrek.Infrastructure.Services.Ner;
 
 namespace TravelTrek.Infrastructure
 {
@@ -146,6 +147,21 @@ namespace TravelTrek.Infrastructure
             services.AddHttpClient<IOpenWeatherService, OpenWeatherService>(client =>
                 {
                     client.BaseAddress = new Uri(configuration[$"{OpenWeatherApiOptions.SectionName}:BaseUrl"]!);
+                    client.Timeout = TimeSpan.FromSeconds(15);
+                })
+                .AddStandardResilienceHandler();
+
+            #endregion
+
+            #region NER API
+
+            services.AddOptionsWithValidateOnStart<NerApiOptions>()
+                .Bind(configuration.GetSection(NerApiOptions.SectionName))
+                .ValidateDataAnnotations();
+
+            services.AddHttpClient<INerService, NerService>(client =>
+                {
+                    client.BaseAddress = new Uri(configuration[$"{NerApiOptions.SectionName}:BaseUrl"]!);
                     client.Timeout = TimeSpan.FromSeconds(15);
                 })
                 .AddStandardResilienceHandler();

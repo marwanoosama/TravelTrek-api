@@ -129,3 +129,10 @@ bfg-*
 
 skills/	
 .agent/
+
+
+__pycache__/
+*.pyc
+
+
+venv/
