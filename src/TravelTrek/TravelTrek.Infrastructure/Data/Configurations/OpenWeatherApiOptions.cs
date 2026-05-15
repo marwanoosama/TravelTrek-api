@@ -9,6 +9,9 @@ public class OpenWeatherApiOptions
     [Required(ErrorMessage = "OpenWeather BaseUrl is required.")]
     public string BaseUrl { get; set; } = default!;
 
+    [Required(ErrorMessage = "OpenWeather GeoBaseUrl is required.")]
+    public string GeoBaseUrl { get; set; } = default!;
+
     [Required(ErrorMessage = "OpenWeather ApiKey is required.")]
     public string ApiKey { get; set; } = default!;
 }

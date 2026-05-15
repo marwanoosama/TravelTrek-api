@@ -23,4 +23,9 @@
     <ProjectReference Include="..\TravelTrek.Infrastructure\TravelTrek.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <_ContentIncludedByDefault Remove="out\appsettings.json" />
+    <_ContentIncludedByDefault Remove="out\appsettings.Production.json" />
+  </ItemGroup>
+
 </Project>

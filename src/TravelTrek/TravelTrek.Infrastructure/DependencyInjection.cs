@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Mail;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -16,9 +17,11 @@ using TravelTrek.Infrastructure.Data.Configurations;
 using TravelTrek.Infrastructure.Repositories;
 using TravelTrek.Infrastructure.Repositories.User;
 using TravelTrek.Infrastructure.Services;
-using TravelTrek.Infrastructure.Services.OpenTrip;
 using TravelTrek.Infrastructure.Services.Weather;
 using TravelTrek.Infrastructure.Services.Ner;
+using TravelTrek.Infrastructure.Services.Osm;
+using TravelTrek.Infrastructure.Services.Ollama;
+using TravelTrek.Infrastructure.Services.TripPlanner;
 
 namespace TravelTrek.Infrastructure
 {
@@ -117,25 +120,10 @@ namespace TravelTrek.Infrastructure
 
             services.AddScoped<ITokenService, TokenService>();
             services.AddScoped<IAuthService, AuthService>();
-            services.AddScoped<IUserProfileService, UserProfileService>();
             services.AddScoped<IEmailService, EmailService>();
 
             #endregion
 
-            #region OpenTripMap
-
-            services.AddHttpClient<IOpenTripMapService, OpenTripMapService>(client =>
-                {
-                    client.BaseAddress = new Uri(configuration[$"{OpenTripMapApiOptions.SectionName}:BaseUrl"]!);
-                    client.Timeout = TimeSpan.FromSeconds(15);
-                })
-                .AddStandardResilienceHandler();
-
-            services.AddOptionsWithValidateOnStart<OpenTripMapApiOptions>()
-                .Bind(configuration.GetSection(OpenTripMapApiOptions.SectionName))
-                .ValidateDataAnnotations();
-
-            #endregion
 
             #region OpenWeather
 
@@ -165,6 +153,49 @@ namespace TravelTrek.Infrastructure
                     client.Timeout = TimeSpan.FromSeconds(15);
                 })
                 .AddStandardResilienceHandler();
+
+            #endregion
+
+            #region OSM Service
+
+            services.AddOptionsWithValidateOnStart<OsmApiOptions>()
+                .Bind(configuration.GetSection(OsmApiOptions.SectionName))
+                .ValidateDataAnnotations();
+
+            services.AddHttpClient<IOsmService, OsmService>(client =>
+                {
+                    client.DefaultRequestHeaders.Add("User-Agent", "TravelApp/1.0 (educational project)");
+                    client.DefaultRequestHeaders.Add("Accept-Language", "en-US,en;q=0.9");
+                    client.Timeout = TimeSpan.FromSeconds(120);
+                });
+
+            #endregion
+
+            #region OpenAI LLM
+
+            services.AddOptionsWithValidateOnStart<OpenAIApiOptions>()
+                .Bind(configuration.GetSection(OpenAIApiOptions.SectionName))
+                .ValidateDataAnnotations();
+
+            services.AddHttpClient<ILLMService, OpenAIService>(client =>
+                {
+                    client.BaseAddress = new Uri(configuration[$"{OpenAIApiOptions.SectionName}:BaseUrl"]!);
+                    client.Timeout = TimeSpan.FromMinutes(3);
+                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+                        "Bearer", configuration[$"{OpenAIApiOptions.SectionName}:ApiKey"]!);
+                })
+                .AddStandardResilienceHandler(options =>
+                {
+                    options.AttemptTimeout.Timeout = TimeSpan.FromMinutes(3);
+                    options.TotalRequestTimeout.Timeout = TimeSpan.FromMinutes(3);
+                    options.CircuitBreaker.SamplingDuration = TimeSpan.FromMinutes(6);
+                });
+
+            #endregion
+
+            #region Trip Plan Orchestrator
+
+            services.AddScoped<ITripPlanService, TripPlanService>();
 
             #endregion
 

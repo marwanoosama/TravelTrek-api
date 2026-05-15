@@ -24,28 +24,33 @@ public class NerService : INerService
 
     public async Task<Result<IEnumerable<NerEntity>>> ExtractEntitiesAsync(NerRequest request, CancellationToken ct = default)
     {
-        var response = await _httpClient.PostAsJsonAsync("extract", request, ct);
-
-        if ((int)response.StatusCode >= 500)
-        {
-            return Result.Failure<IEnumerable<NerEntity>>(Error.External("NerApi.ServerError", $"NER API server error: {(int)response.StatusCode}."));
-        }
-
-        if (!response.IsSuccessStatusCode)
-        {
-            return Result.Failure<IEnumerable<NerEntity>>(Error.Internal("NerApi.Error", $"Unexpected response: {(int)response.StatusCode}."));
-        }
-
         try
         {
-            var value = await response.Content.ReadFromJsonAsync<IEnumerable<NerEntity>>(cancellationToken: ct);
+            var response = await _httpClient.PostAsJsonAsync("extract", request, ct);
 
+            if ((int)response.StatusCode >= 500)
+            {
+                return Result.Failure<IEnumerable<NerEntity>>(Error.External("NerApi.ServerError", $"NER API server error: {(int)response.StatusCode}."));
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                return Result.Failure<IEnumerable<NerEntity>>(Error.Internal("NerApi.Error", $"Unexpected response: {(int)response.StatusCode}."));
+            }
+
+            var value = await response.Content.ReadFromJsonAsync<IEnumerable<NerEntity>>(cancellationToken: ct);
             if (value is null)
             {
                 return Result.Failure<IEnumerable<NerEntity>>(Error.Internal("NerApi.EmptyResponse", "Empty response from NER API."));
             }
 
             return Result.Success(value);
+        }
+        catch(HttpRequestException ex)
+        {
+            _logger.LogWarning(ex, "Failed to connect to ner service");
+            return Result.Failure<IEnumerable<NerEntity>>(Error.External("NerApi.ServerError", "NER API is not available at the moment."));
+            
         }
         catch (JsonException ex)
         {
@@ -54,9 +59,7 @@ public class NerService : INerService
         }
     }
 
-    public async Task<Result<ExtractedTripData>> ExtractAndParseTripDataAsync(
-        NerRequest request,
-        CancellationToken ct = default)
+    public async Task<Result<ExtractedTripData>> ExtractAndParseTripDataAsync(NerRequest request, CancellationToken ct = default)
     {
         var rawEntitiesResult = await ExtractEntitiesAsync(request, ct);
         if (rawEntitiesResult.IsFailure)

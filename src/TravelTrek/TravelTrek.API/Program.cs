@@ -2,10 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using Serilog;
 using TravelTrek.API.Extensions;
 using TravelTrek.API.Middleware;
-using TravelTrek.Application.Interfaces;
 using TravelTrek.Infrastructure;
 using TravelTrek.Infrastructure.Data;
-using TravelTrek.Infrastructure.Services.OpenTrip;
 
 namespace TravelTrek.API
 {
